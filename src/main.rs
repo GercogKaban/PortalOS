@@ -2,12 +2,21 @@
 #![no_main]
 
 use core::panic::PanicInfo;
+pub mod util
+{
+    pub mod print;
+}
+
+use util::print;
+
 static HELLO: &[u8] = b"Hello World!\n";
 
 #[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! 
 {
     let vga_buffer = 0xb8000 as *mut u8;
+
+    print::print_ln(HELLO);
 
     for (i, &byte) in HELLO.iter().enumerate()  
     {
