@@ -19,10 +19,10 @@ fn get_cursor_position() -> u32
     // TODO: ordering should be reviewed
     let cursor_pos_x = CURSOR_POSITION_X.load(atomic::Ordering::SeqCst);
     let cursor_pos_y = CURSOR_POSITION_Y.load(atomic::Ordering::SeqCst);
-    return cursor_pos_x * VGA_WIDTH + cursor_pos_y;
+    cursor_pos_y * VGA_WIDTH + cursor_pos_x
 }
 
-fn get_next_cursor_position(new_line:bool) -> u32
+fn calculate_next_cursor_position(new_line:bool) -> u32
 {
     // TODO: ordering should be reviewed
     let cursor_pos_x = CURSOR_POSITION_X.load(atomic::Ordering::SeqCst);
@@ -50,16 +50,20 @@ fn get_next_cursor_position(new_line:bool) -> u32
         new_cursor_pos_x = new_cursor_pos_x + 1;
     }
 
-    return new_cursor_pos_x * VGA_WIDTH + new_cursor_pos_y;
+    // TODO: ordering should be reviewed
+    CURSOR_POSITION_X.store(new_cursor_pos_x, atomic::Ordering::SeqCst);
+    CURSOR_POSITION_Y.store(new_cursor_pos_y, atomic::Ordering::SeqCst);
+
+    new_cursor_pos_y * VGA_WIDTH + new_cursor_pos_x
 }
 
 // TODO: Should be implemented when
 fn get_previous_cursor_position(new_line:bool) -> u32
 {
-    let new_cursor_pos = get_next_cursor_position(new_line);
+    //let new_cursor_pos = get_next_cursor_position(new_line);
 
-
-    return new_cursor_pos;
+    0
+    //return new_cursor_pos;
 }
 
 //fn inc_cursor_position() -> u32
@@ -82,7 +86,12 @@ pub fn print(string: &[u8])
                 let is_endline = byte == b'\n';
 
                 // TODO: mutex/spinlock should be used, because cursor position can be modified by other threads
-                let cursor_position = get_next_cursor_position(is_endline);
+                let cursor_position = calculate_next_cursor_position(is_endline);
+
+                if (is_endline)
+                {
+                    continue;
+                }
 
                 *VGA_BUFFER.offset(cursor_position as isize * 2) = byte;
                 *VGA_BUFFER.offset(cursor_position as isize * 2 + 1) = 0xb;
